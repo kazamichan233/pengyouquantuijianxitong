@@ -1,6 +1,7 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #define MAX_USERS 100
 #define MAX_PRODUCTS 50
@@ -35,18 +36,32 @@ void registerUser() {
 
     char username[50], password[50];
     printf("请输入用户名：");
-    scanf("%s", username);
+    if (scanf("%49s", username) != 1) {
+        printf("输入无效！\n");
+        return;
+    }
 
     // 检查用户名是否重复
+    char lowerUsername[50], lowerStoredUsername[50];
     for (int i = 0; i < userCount; i++) {
-        if (strcmp(users[i].username, username) == 0) {
+        strncpy(lowerUsername, username, 50);
+        strncpy(lowerStoredUsername, users[i].username, 50);
+        for (int j = 0; j < 50; j++) {
+            lowerUsername[j] = tolower(lowerUsername[j]);
+            lowerStoredUsername[j] = tolower(lowerStoredUsername[j]);
+        }
+
+        if (strncmp(lowerStoredUsername, lowerUsername, 50) == 0) {
             printf("用户名已存在，请选择其他用户名！\n");
             return;
         }
     }
 
     printf("请输入密码：");
-    scanf("%s", password);
+    if (scanf("%49s", password) != 1) {
+        printf("输入无效！\n");
+        return;
+    }
 
     // 添加新用户
     strcpy(users[userCount].username, username);
@@ -62,13 +77,27 @@ void registerUser() {
 void loginUser() {
     char username[50], password[50];
     printf("请输入用户名：");
-    scanf("%s", username);
+    if (scanf("%49s", username) != 1) {
+        printf("输入无效！\n");
+        return;
+    }
     printf("请输入密码：");
-    scanf("%s", password);
+    if (scanf("%49s", password) != 1) {
+        printf("输入无效！\n");
+        return;
+    }
 
     // 验证用户名和密码
+    char lowerUsername[50], lowerStoredUsername[50];
     for (int i = 0; i < userCount; i++) {
-        if (strcmp(users[i].username, username) == 0 && strcmp(users[i].password, password) == 0) {
+        strncpy(lowerUsername, username, 50);
+        strncpy(lowerStoredUsername, users[i].username, 50);
+        for (int j = 0; j < 50; j++) {
+            lowerUsername[j] = tolower(lowerUsername[j]);
+            lowerStoredUsername[j] = tolower(lowerStoredUsername[j]);
+        }
+
+        if (strncmp(lowerStoredUsername, lowerUsername, 50) == 0 && strcmp(users[i].password, password) == 0) {
             currentUserIndex = i; // 记录当前登录用户索引
             printf("登录成功！欢迎您，%s！\n", username);
             return;
@@ -85,20 +114,40 @@ void addUser() {
 
 // 提取重复代码为通用函数，减少冗余
 
-// 通用函数：查找用户索引
+// 替换 _stricmp 为 strncmp，并在比较前将字符串转换为小写
+
+// 通用函数：查找用户索引（不区分大小写）
 int findUserIndex(const char *username) {
+    char lowerUsername[50], lowerStoredUsername[50];
     for (int i = 0; i < userCount; i++) {
-        if (strcmp(users[i].username, username) == 0) {
+        // 转换为小写
+        strncpy(lowerUsername, username, 50);
+        strncpy(lowerStoredUsername, users[i].username, 50);
+        for (int j = 0; j < 50; j++) {
+            lowerUsername[j] = tolower(lowerUsername[j]);
+            lowerStoredUsername[j] = tolower(lowerStoredUsername[j]);
+        }
+
+        if (strncmp(lowerStoredUsername, lowerUsername, 50) == 0) {
             return i; // 返回用户索引
         }
     }
     return -1; // 未找到返回-1
 }
 
-// 通用函数：查找商品索引
+// 通用函数：查找商品索引（不区分大小写）
 int findProductIndex(const char *name) {
+    char lowerName[50], lowerStoredName[50];
     for (int i = 0; i < productCount; i++) {
-        if (strcmp(products[i].name, name) == 0) {
+        // 转换为小写
+        strncpy(lowerName, name, 50);
+        strncpy(lowerStoredName, products[i].name, 50);
+        for (int j = 0; j < 50; j++) {
+            lowerName[j] = tolower(lowerName[j]);
+            lowerStoredName[j] = tolower(lowerStoredName[j]);
+        }
+
+        if (strncmp(lowerStoredName, lowerName, 50) == 0) {
             return i; // 返回商品索引
         }
     }
@@ -109,12 +158,12 @@ int findProductIndex(const char *name) {
 void modifyUser() {
     char username[50];
     printf("请输入要修改的用户名：");
-    scanf("%s", username);
+    scanf("%49s", username); // 限制输入长度为 49
 
     int userIndex = findUserIndex(username);
     if (userIndex != -1) {
         printf("请输入新密码：");
-        scanf("%s", users[userIndex].password);
+        scanf("%49s", users[userIndex].password); // 限制输入长度为 49
         printf("用户信息修改成功！\n");
     } else {
         printf("未找到该用户！\n");
@@ -125,10 +174,16 @@ void modifyUser() {
 void deleteUser() {
     char username[50];
     printf("请输入要删除的用户名：");
-    scanf("%s", username);
+    scanf("%49s", username);
 
     int userIndex = findUserIndex(username);
     if (userIndex != -1) {
+        // 清理其他用户的好友关系
+        for (int i = 0; i < userCount; i++) {
+            users[i].friends[userIndex] = 0;
+        }
+
+        // 删除用户并移动数组
         for (int j = userIndex; j < userCount - 1; j++) {
             users[j] = users[j + 1];
         }
@@ -148,7 +203,7 @@ void addProduct() {
 
     char name[50];
     printf("请输入商品名：");
-    scanf("%s", name);
+    scanf("%49s", name); // 限制输入长度为 49
 
     // 检查商品是否已存在
     for (int i = 0; i < productCount; i++) {
@@ -169,7 +224,7 @@ void addProduct() {
 void modifyProduct() {
     char name[50];
     printf("请输入要修改的商品名：");
-    scanf("%s", name);
+    scanf("%49s", name); // 限制输入长度为 49
 
     int productIndex = findProductIndex(name);
     if (productIndex != -1) {
@@ -185,10 +240,16 @@ void modifyProduct() {
 void deleteProduct() {
     char name[50];
     printf("请输入要删除的商品名：");
-    scanf("%s", name);
+    scanf("%49s", name); // 限制输入长度为 49
 
     int productIndex = findProductIndex(name);
     if (productIndex != -1) {
+        // 清理所有用户的购买记录
+        for (int i = 0; i < userCount; i++) {
+            users[i].purchased[productIndex] = 0;
+        }
+
+        // 删除商品并移动数组
         for (int j = productIndex; j < productCount - 1; j++) {
             products[j] = products[j + 1];
         }
@@ -203,7 +264,7 @@ void deleteProduct() {
 void queryUser() {
     char username[50];
     printf("请输入要查询的用户名：");
-    scanf("%s", username);
+    scanf("%49s", username); // 限制输入长度为 49
 
     for (int i = 0; i < userCount; i++) {
         if (strcmp(users[i].username, username) == 0) {
@@ -226,7 +287,7 @@ void queryUser() {
 void queryProduct() {
     char name[50];
     printf("请输入要查询的商品名：");
-    scanf("%s", name);
+    scanf("%49s", name); // 限制输入长度为 49
 
     for (int i = 0; i < productCount; i++) {
         if (strcmp(products[i].name, name) == 0) {
@@ -240,16 +301,31 @@ void queryProduct() {
 }
 
 // 添加商品排序功能
-void sortProducts() {
-    for (int i = 0; i < productCount - 1; i++) {
-        for (int j = 0; j < productCount - i - 1; j++) {
-            if (products[j].purchaseCount < products[j + 1].purchaseCount) {
-                Product temp = products[j];
-                products[j] = products[j + 1];
-                products[j + 1] = temp;
-            }
+// 快速排序辅助函数
+void quickSort(Product arr[], int left, int right) {
+    if (left >= right) return;
+
+    int pivot = arr[right].purchaseCount;
+    int i = left - 1;
+    for (int j = left; j < right; j++) {
+        if (arr[j].purchaseCount > pivot) {
+            i++;
+            Product temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
         }
     }
+
+    Product temp = arr[i + 1];
+    arr[i + 1] = arr[right];
+    arr[right] = temp;
+
+    quickSort(arr, left, i);
+    quickSort(arr, i + 2, right);
+}
+
+void sortProducts() {
+    quickSort(products, 0, productCount - 1);
 
     printf("商品已按购买次数排序：\n");
     for (int i = 0; i < productCount; i++) {
@@ -301,6 +377,20 @@ void recommendProducts(int userId) {
         }
     }
 
+    // 检查是否有有效推荐
+    int hasRecommendation = 0;
+    for (int i = 0; i < MAX_PRODUCTS; i++) {
+        if (recommendation[sortedIndices[i]] > 0) {
+            hasRecommendation = 1;
+            break;
+        }
+    }
+
+    if (!hasRecommendation) {
+        printf("暂无推荐商品！\n");
+        return;
+    }
+
     // 输出推荐商品
     printf("为用户推荐的商品：\n");
     for (int i = 0; i < MAX_PRODUCTS; i++) {
@@ -319,23 +409,49 @@ void saveToFile() {
     }
 
     // 保存用户信息
-    fprintf(file, "%d\n", userCount);
+    if (fprintf(file, "%d\n", userCount) < 0) {
+        printf("保存用户数量失败！\n");
+        fclose(file);
+        return;
+    }
+
     for (int i = 0; i < userCount; i++) {
-        fprintf(file, "%s %s\n", users[i].username, users[i].password);
+        if (fprintf(file, "%s %s\n", users[i].username, users[i].password) < 0) {
+            printf("保存用户信息失败！\n");
+            fclose(file);
+            return;
+        }
         for (int j = 0; j < MAX_USERS; j++) {
-            fprintf(file, "%d ", users[i].friends[j]);
+            if (fprintf(file, "%d ", users[i].friends[j]) < 0) {
+                printf("保存用户好友信息失败！\n");
+                fclose(file);
+                return;
+            }
         }
         fprintf(file, "\n");
         for (int j = 0; j < MAX_PRODUCTS; j++) {
-            fprintf(file, "%d ", users[i].purchased[j]);
+            if (fprintf(file, "%d ", users[i].purchased[j]) < 0) {
+                printf("保存用户购买记录失败！\n");
+                fclose(file);
+                return;
+            }
         }
         fprintf(file, "\n");
     }
 
     // 保存商品信息
-    fprintf(file, "%d\n", productCount);
+    if (fprintf(file, "%d\n", productCount) < 0) {
+        printf("保存商品数量失败！\n");
+        fclose(file);
+        return;
+    }
+
     for (int i = 0; i < productCount; i++) {
-        fprintf(file, "%s %d\n", products[i].name, products[i].purchaseCount);
+        if (fprintf(file, "%s %d\n", products[i].name, products[i].purchaseCount) < 0) {
+            printf("保存商品信息失败！\n");
+            fclose(file);
+            return;
+        }
     }
 
     fclose(file);
@@ -350,22 +466,49 @@ void loadFromFile() {
         return;
     }
 
+
     // 加载用户信息
-    fscanf(file, "%d\n", &userCount);
+    if (fscanf(file, "%d\n", &userCount) != 1) {
+        printf("加载用户数量失败！\n");
+        fclose(file);
+        return;
+    }
+
     for (int i = 0; i < userCount; i++) {
-        fscanf(file, "%s %s\n", users[i].username, users[i].password);
+        if (fscanf(file, "%49s %49s\n", users[i].username, users[i].password) != 2) {
+            printf("加载用户信息失败！\n");
+            fclose(file);
+            return;
+        }
         for (int j = 0; j < MAX_USERS; j++) {
-            fscanf(file, "%d ", &users[i].friends[j]);
+            if (fscanf(file, "%d ", &users[i].friends[j]) != 1) {
+                printf("加载用户好友信息失败！\n");
+                fclose(file);
+                return;
+            }
         }
         for (int j = 0; j < MAX_PRODUCTS; j++) {
-            fscanf(file, "%d ", &users[i].purchased[j]);
+            if (fscanf(file, "%d ", &users[i].purchased[j]) != 1) {
+                printf("加载用户购买记录失败！\n");
+                fclose(file);
+                return;
+            }
         }
     }
 
     // 加载商品信息
-    fscanf(file, "%d\n", &productCount);
+    if (fscanf(file, "%d\n", &productCount) != 1) {
+        printf("加载商品数量失败！\n");
+        fclose(file);
+        return;
+    }
+
     for (int i = 0; i < productCount; i++) {
-        fscanf(file, "%s %d\n", products[i].name, &products[i].purchaseCount);
+        if (fscanf(file, "%49s %d\n", products[i].name, &products[i].purchaseCount) != 2) {
+            printf("加载商品信息失败！\n");
+            fclose(file);
+            return;
+        }
     }
 
     fclose(file);
@@ -377,9 +520,15 @@ void displayMenu() {
     printf("\n========================================\n");
     printf("          朋友圈商品推荐系统           \n");
     printf("========================================\n");
+    if (currentUserIndex != -1) {
+        printf("当前登录用户：%s\n", users[currentUserIndex].username);
+    } else {
+        printf("当前未登录\n");
+    }
+    printf("========================================\n");
     printf("1. 用户注册\n");
     printf("2. 用户登录\n");
-    printf("3. 推荐商品\n"); // 新增推荐商品选项
+    printf("3. 推荐商品\n"); 
     printf("4. 管理员功能\n");
     printf("5. 管理朋友圈\n");
     printf("6. 保存数据\n");
@@ -474,7 +623,7 @@ void addFriend() {
 
     char friendUsername[50];
     printf("请输入要添加的好友用户名：");
-    scanf("%s", friendUsername);
+    scanf("%49s", friendUsername); // 限制输入长度为 49
 
     int friendIndex = findUserIndex(friendUsername);
     if (friendIndex == -1) {
@@ -500,7 +649,7 @@ void removeFriend() {
 
     char friendUsername[50];
     printf("请输入要删除的好友用户名：");
-    scanf("%s", friendUsername);
+    scanf("%49s", friendUsername); // 限制输入长度为 49
 
     int friendIndex = findUserIndex(friendUsername);
     if (friendIndex == -1) {
@@ -528,6 +677,91 @@ void queryFriends() {
     for (int i = 0; i < MAX_USERS; i++) {
         if (users[currentUserIndex].friends[i]) {
             printf("好友用户名：%s\n", users[i].username);
+            printf("购买的商品：\n");
+            int hasPurchases = 0; // 标记是否有购买记录
+            for (int j = 0; j < MAX_PRODUCTS; j++) {
+                if (users[i].purchased[j] > 0) {
+                    printf("  商品ID %d (数量 %d)\n", j, users[i].purchased[j]);
+                    hasPurchases = 1;
+                }
+            }
+            if (!hasPurchases) {
+                printf("  无购买记录\n");
+            }
+        }
+    }
+}
+
+// 管理员功能
+void adminMenu() {
+    int adminChoice;
+    while (1) {
+        displayAdminMenu();
+        scanf("%d", &adminChoice);
+
+        switch (adminChoice) {
+            case 1:
+                addUser();
+                break;
+            case 2:
+                modifyUser();
+                break;
+            case 3:
+                deleteUser();
+                break;
+            case 4:
+                addProduct();
+                break;
+            case 5:
+                modifyProduct();
+                break;
+            case 6:
+                deleteProduct();
+                break;
+            case 7:
+                queryUser();
+                break;
+            case 8:
+                queryProduct();
+                break;
+            case 9:
+                sortProducts();
+                break;
+            case 10:
+                showCurrentUserPurchases();
+                break;
+            case 11:
+                modifyCurrentUserPurchases();
+                break;
+            case 12:
+                return; // 返回主菜单
+            default:
+                printf("无效的选择，请重新输入！\n");
+        }
+    }
+}
+
+// 管理朋友圈
+void friendMenu() {
+    int friendChoice;
+    while (1) {
+        displayFriendMenu();
+        scanf("%d", &friendChoice);
+
+        switch (friendChoice) {
+            case 1:
+                addFriend();
+                break;
+            case 2:
+                removeFriend();
+                break;
+            case 3:
+                queryFriends();
+                break;
+            case 4:
+                return; // 返回主菜单
+            default:
+                printf("无效的选择，请重新输入！\n");
         }
     }
 }
@@ -547,86 +781,19 @@ int main() {
             case 2:
                 loginUser();
                 break;
-            case 3: { // 推荐商品功能
+            case 3:
                 if (currentUserIndex == -1) {
                     printf("请先登录！\n");
                 } else {
                     recommendProducts(currentUserIndex);
                 }
                 break;
-            }
-            case 4: { // 管理员功能
-                int adminChoice;
-                while (1) {
-                    displayAdminMenu();
-                    scanf("%d", &adminChoice);
-
-                    switch (adminChoice) {
-                        case 1:
-                            addUser();
-                            break;
-                        case 2:
-                            modifyUser();
-                            break;
-                        case 3:
-                            deleteUser();
-                            break;
-                        case 4:
-                            addProduct();
-                            break;
-                        case 5:
-                            modifyProduct();
-                            break;
-                        case 6:
-                            deleteProduct();
-                            break;
-                        case 7:
-                            queryUser();
-                            break;
-                        case 8:
-                            queryProduct();
-                            break;
-                        case 9:
-                            sortProducts();
-                            break;
-                        case 10:
-                            showCurrentUserPurchases();
-                            break;
-                        case 11:
-                            modifyCurrentUserPurchases();
-                            break;
-                        case 12:
-                            goto mainMenu; // 返回主菜单
-                        default:
-                            printf("无效的选择，请重新输入！\n");
-                    }
-                }
+            case 4:
+                adminMenu();
                 break;
-            }
-            case 5: { // 管理朋友圈
-                int friendChoice;
-                while (1) {
-                    displayFriendMenu();
-                    scanf("%d", &friendChoice);
-
-                    switch (friendChoice) {
-                        case 1:
-                            addFriend();
-                            break;
-                        case 2:
-                            removeFriend();
-                            break;
-                        case 3:
-                            queryFriends();
-                            break;
-                        case 4:
-                            goto mainMenu; // 返回主菜单
-                        default:
-                            printf("无效的选择，请重新输入！\n");
-                    }
-                }
+            case 5:
+                friendMenu();
                 break;
-            }
             case 6:
                 saveToFile();
                 break;
@@ -637,6 +804,8 @@ int main() {
             default:
                 printf("无效的选择，请重新输入！\n");
         }
+    }
+}
 
         mainMenu:; // 主菜单标签
     }

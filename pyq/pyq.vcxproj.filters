@@ -23,6 +23,6 @@
     <None Include="..\..\ConsoleApplication2\src\main.exe" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\..\ConsoleApplication2\src\data.txt" />
+    <Text Include="data.txt" />
   </ItemGroup>
 </Project>

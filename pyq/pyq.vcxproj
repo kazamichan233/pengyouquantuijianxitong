@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{ba03c260-c7b4-4de0-ad2c-580e3d234c7e}</ProjectGuid>
+    <ProjectGuid>{8883B1CA-B226-089D-09CE-830C555D7C87}</ProjectGuid>
     <RootNamespace>pyq</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>

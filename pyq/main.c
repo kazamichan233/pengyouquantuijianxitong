@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <direct.h> // _getcwd
+#include <io.h> // _access
 
 #define MAX_USERS 100
 #define MAX_PRODUCTS 50
@@ -27,6 +31,62 @@ int userCount = 0;
 int productCount = 0;
 int currentUserIndex = -1; // -1 表示未登录
 
+// ---------- 输入辅助函数（使用 fgets，拒绝空输入或仅空白） ----------
+static void readLine(char *buf, int size) {
+    if (!fgets(buf, size, stdin)) {
+        buf[0] = '\0';
+        return;
+    }
+    // 去掉结尾的换行和回车
+    size_t len = strcspn(buf, "\r\n");
+    buf[len] = '\0';
+}
+
+// 去除字符串两端空白字符（空格、制表、回车等）
+static void trim_whitespace(char *s) {
+    if (!s || !*s) return;
+    char *start = s;
+    while (*start && isspace((unsigned char)*start)) start++;
+    if (start != s) memmove(s, start, strlen(start) + 1);
+
+    size_t len = strlen(s);
+    while (len > 0 && isspace((unsigned char)s[len - 1])) {
+        s[len - 1] = '\0';
+        len--;
+    }
+}
+
+static void readNonEmptyString(const char *prompt, char *out, int size) {
+    while (1) {
+        printf("%s", prompt);
+        readLine(out, size);
+        trim_whitespace(out);
+        if (out[0] != '\0') return;
+        printf("输入不能为空或仅包含空白字符，请重试！\n");
+    }
+}
+
+static int readIntWithPrompt(const char *prompt) {
+    char line[128];
+    while (1) {
+        printf("%s", prompt);
+        readLine(line, sizeof(line));
+        trim_whitespace(line);
+        if (line[0] == '\0') {
+            printf("输入不能为空或仅包含空白字符，请重试！\n");
+            continue;
+        }
+        char *endptr = NULL;
+        long val = strtol(line, &endptr, 10);
+        if (endptr == line || *endptr != '\0') {
+            printf("输入无效，请输入整数！\n");
+            continue;
+        }
+        return (int)val;
+    }
+}
+// -----------------------------------------------------------------%
+
 // 添加用户注册功能
 void registerUser() {
     if (userCount >= MAX_USERS) {
@@ -35,11 +95,8 @@ void registerUser() {
     }
 
     char username[50], password[50];
-    printf("请输入用户名：");
-    if (scanf("%49s", username) != 1) {
-        printf("输入无效！\n");
-        return;
-    }
+
+    readNonEmptyString("请输入用户名：", username, sizeof(username));
 
     // 检查用户名是否重复
     char lowerUsername[50], lowerStoredUsername[50];
@@ -47,8 +104,8 @@ void registerUser() {
         strncpy(lowerUsername, username, 50);
         strncpy(lowerStoredUsername, users[i].username, 50);
         for (int j = 0; j < 50; j++) {
-            lowerUsername[j] = tolower(lowerUsername[j]);
-            lowerStoredUsername[j] = tolower(lowerStoredUsername[j]);
+            lowerUsername[j] = tolower((unsigned char)lowerUsername[j]);
+            lowerStoredUsername[j] = tolower((unsigned char)lowerStoredUsername[j]);
         }
 
         if (strncmp(lowerStoredUsername, lowerUsername, 50) == 0) {
@@ -57,11 +114,7 @@ void registerUser() {
         }
     }
 
-    printf("请输入密码：");
-    if (scanf("%49s", password) != 1) {
-        printf("输入无效！\n");
-        return;
-    }
+    readNonEmptyString("请输入密码：", password, sizeof(password));
 
     // 添加新用户
     strcpy(users[userCount].username, username);
@@ -76,16 +129,9 @@ void registerUser() {
 // 修改登录功能，记录当前登录用户
 void loginUser() {
     char username[50], password[50];
-    printf("请输入用户名：");
-    if (scanf("%49s", username) != 1) {
-        printf("输入无效！\n");
-        return;
-    }
-    printf("请输入密码：");
-    if (scanf("%49s", password) != 1) {
-        printf("输入无效！\n");
-        return;
-    }
+
+    readNonEmptyString("请输入用户名：", username, sizeof(username));
+    readNonEmptyString("请输入密码：", password, sizeof(password));
 
     // 验证用户名和密码
     char lowerUsername[50], lowerStoredUsername[50];
@@ -93,13 +139,13 @@ void loginUser() {
         strncpy(lowerUsername, username, 50);
         strncpy(lowerStoredUsername, users[i].username, 50);
         for (int j = 0; j < 50; j++) {
-            lowerUsername[j] = tolower(lowerUsername[j]);
-            lowerStoredUsername[j] = tolower(lowerStoredUsername[j]);
+            lowerUsername[j] = tolower((unsigned char)lowerUsername[j]);
+            lowerStoredUsername[j] = tolower((unsigned char)lowerStoredUsername[j]);
         }
 
         if (strncmp(lowerStoredUsername, lowerUsername, 50) == 0 && strcmp(users[i].password, password) == 0) {
             currentUserIndex = i; // 记录当前登录用户索引
-            printf("登录成功！欢迎您，%s！\n", username);
+            printf("登录成功！欢迎您，%s！\n", users[i].username);
             return;
         }
     }
@@ -112,10 +158,6 @@ void addUser() {
     registerUser();
 }
 
-// 提取重复代码为通用函数，减少冗余
-
-// 替换 _stricmp 为 strncmp，并在比较前将字符串转换为小写
-
 // 通用函数：查找用户索引（不区分大小写）
 int findUserIndex(const char *username) {
     char lowerUsername[50], lowerStoredUsername[50];
@@ -124,8 +166,8 @@ int findUserIndex(const char *username) {
         strncpy(lowerUsername, username, 50);
         strncpy(lowerStoredUsername, users[i].username, 50);
         for (int j = 0; j < 50; j++) {
-            lowerUsername[j] = tolower(lowerUsername[j]);
-            lowerStoredUsername[j] = tolower(lowerStoredUsername[j]);
+            lowerUsername[j] = tolower((unsigned char)lowerUsername[j]);
+            lowerStoredUsername[j] = tolower((unsigned char)lowerStoredUsername[j]);
         }
 
         if (strncmp(lowerStoredUsername, lowerUsername, 50) == 0) {
@@ -143,8 +185,8 @@ int findProductIndex(const char *name) {
         strncpy(lowerName, name, 50);
         strncpy(lowerStoredName, products[i].name, 50);
         for (int j = 0; j < 50; j++) {
-            lowerName[j] = tolower(lowerName[j]);
-            lowerStoredName[j] = tolower(lowerStoredName[j]);
+            lowerName[j] = tolower((unsigned char)lowerName[j]);
+            lowerStoredName[j] = tolower((unsigned char)lowerStoredName[j]);
         }
 
         if (strncmp(lowerStoredName, lowerName, 50) == 0) {
@@ -157,13 +199,11 @@ int findProductIndex(const char *name) {
 // 修改用户信息功能，使用通用函数
 void modifyUser() {
     char username[50];
-    printf("请输入要修改的用户名：");
-    scanf("%49s", username); // 限制输入长度为 49
+    readNonEmptyString("请输入要修改的用户名：", username, sizeof(username)); // 限制输入长度为 49
 
     int userIndex = findUserIndex(username);
     if (userIndex != -1) {
-        printf("请输入新密码：");
-        scanf("%49s", users[userIndex].password); // 限制输入长度为 49
+        readNonEmptyString("请输入新密码：", users[userIndex].password, sizeof(users[userIndex].password)); // 限制输入长度为 49
         printf("用户信息修改成功！\n");
     } else {
         printf("未找到该用户！\n");
@@ -173,8 +213,7 @@ void modifyUser() {
 // 删除用户功能，使用通用函数
 void deleteUser() {
     char username[50];
-    printf("请输入要删除的用户名：");
-    scanf("%49s", username);
+    readNonEmptyString("请输入要删除的用户名：", username, sizeof(username));
 
     int userIndex = findUserIndex(username);
     if (userIndex != -1) {
@@ -202,8 +241,7 @@ void addProduct() {
     }
 
     char name[50];
-    printf("请输入商品名：");
-    scanf("%49s", name); // 限制输入长度为 49
+    readNonEmptyString("请输入商品名：", name, sizeof(name)); // 限制输入长度为 49
 
     // 检查商品是否已存在
     for (int i = 0; i < productCount; i++) {
@@ -223,13 +261,12 @@ void addProduct() {
 // 修改商品信息功能，使用通用函数
 void modifyProduct() {
     char name[50];
-    printf("请输入要修改的商品名：");
-    scanf("%49s", name); // 限制输入长度为 49
+    readNonEmptyString("请输入要修改的商品名：", name, sizeof(name)); // 限制输入长度为 49
 
     int productIndex = findProductIndex(name);
     if (productIndex != -1) {
-        printf("请输入新的购买次数：");
-        scanf("%d", &products[productIndex].purchaseCount);
+        int newCount = readIntWithPrompt("请输入新的购买次数：");
+        products[productIndex].purchaseCount = newCount;
         printf("商品信息修改成功！\n");
     } else {
         printf("未找到该商品！\n");
@@ -239,8 +276,7 @@ void modifyProduct() {
 // 删除商品功能，使用通用函数
 void deleteProduct() {
     char name[50];
-    printf("请输入要删除的商品名：");
-    scanf("%49s", name); // 限制输入长度为 49
+    readNonEmptyString("请输入要删除的商品名：", name, sizeof(name)); // 限制输入长度为 49
 
     int productIndex = findProductIndex(name);
     if (productIndex != -1) {
@@ -263,8 +299,7 @@ void deleteProduct() {
 // 添加用户查询功能
 void queryUser() {
     char username[50];
-    printf("请输入要查询的用户名：");
-    scanf("%49s", username); // 限制输入长度为 49
+    readNonEmptyString("请输入要查询的用户名：", username, sizeof(username)); // 限制输入长度为 49
 
     for (int i = 0; i < userCount; i++) {
         if (strcmp(users[i].username, username) == 0) {
@@ -286,8 +321,7 @@ void queryUser() {
 // 添加商品查询功能
 void queryProduct() {
     char name[50];
-    printf("请输入要查询的商品名：");
-    scanf("%49s", name); // 限制输入长度为 49
+    readNonEmptyString("请输入要查询的商品名：", name, sizeof(name)); // 限制输入长度为 49
 
     for (int i = 0; i < productCount; i++) {
         if (strcmp(products[i].name, name) == 0) {
@@ -325,7 +359,7 @@ void quickSort(Product arr[], int left, int right) {
 }
 
 void sortProducts() {
-    quickSort(products, 0, productCount - 1);
+    if (productCount > 0) quickSort(products, 0, productCount - 1);
 
     printf("商品已按购买次数排序：\n");
     for (int i = 0; i < productCount; i++) {
@@ -342,8 +376,8 @@ void recommendProducts(int userId) {
 
     int recommendation[MAX_PRODUCTS] = {0}; // 推荐商品的购买次数统计
 
-    // 遍历用户的朋友圈
-    for (int i = 0; i < MAX_USERS; i++) {
+    // 遍历用户的朋友圈 —— 只遍历已注册用户范围
+    for (int i = 0; i < userCount; i++) {
         if (users[userId].friends[i]) { // 如果是朋友
             int friendId = i; // 获取朋友的用户ID
 
@@ -402,13 +436,32 @@ void recommendProducts(int userId) {
 
 // 添加文件存储功能
 void saveToFile() {
+    // 使用当前工作目录（即 exe 所在目录）的相对路径 data.txt 保存数据
+    char cwd[_MAX_PATH];
+    char filepath[_MAX_PATH];
+    if (_getcwd(cwd, sizeof(cwd)) == NULL) {
+        cwd[0] = '\0';
+    }
+
+    // 直接在当前工作目录创建 data.txt（相对路径）
     FILE *file = fopen("data.txt", "w");
     if (!file) {
-        printf("无法打开文件进行保存！\n");
+        int err = errno;
+        if (cwd[0] != '\0') {
+#ifdef _WIN32
+            snprintf(filepath, sizeof(filepath), "%s\\data.txt", cwd);
+#else
+            snprintf(filepath, sizeof(filepath), "%s/data.txt", cwd);
+#endif
+        } else {
+            snprintf(filepath, sizeof(filepath), "data.txt");
+        }
+        printf("无法在当前工作目录保存 data.txt（路径：%s），errno=%d (%s)\n", filepath, err, strerror(err));
+        printf("请确认该目录存在并有写权限（目录：%s）。\n", cwd[0] ? cwd : ".");
         return;
     }
 
-    // 保存用户信息
+    // 写入数据（保持原有格式）
     if (fprintf(file, "%d\n", userCount) < 0) {
         printf("保存用户数量失败！\n");
         fclose(file);
@@ -421,7 +474,7 @@ void saveToFile() {
             fclose(file);
             return;
         }
-        for (int j = 0; j < MAX_USERS; j++) {
+        for (int j = 0; j < userCount; j++) {
             if (fprintf(file, "%d ", users[i].friends[j]) < 0) {
                 printf("保存用户好友信息失败！\n");
                 fclose(file);
@@ -429,7 +482,7 @@ void saveToFile() {
             }
         }
         fprintf(file, "\n");
-        for (int j = 0; j < MAX_PRODUCTS; j++) {
+        for (int j = 0; j < productCount; j++) {
             if (fprintf(file, "%d ", users[i].purchased[j]) < 0) {
                 printf("保存用户购买记录失败！\n");
                 fclose(file);
@@ -439,7 +492,6 @@ void saveToFile() {
         fprintf(file, "\n");
     }
 
-    // 保存商品信息
     if (fprintf(file, "%d\n", productCount) < 0) {
         printf("保存商品数量失败！\n");
         fclose(file);
@@ -455,7 +507,18 @@ void saveToFile() {
     }
 
     fclose(file);
-    printf("数据已成功保存到文件！\n");
+
+    // 输出保存的完整路径（如果能获取工作目录则显示，否则显示相对路径）
+    if (cwd[0] != '\0') {
+#ifdef _WIN32
+        snprintf(filepath, sizeof(filepath), "%s\\data.txt", cwd);
+#else
+        snprintf(filepath, sizeof(filepath), "%s/data.txt", cwd);
+#endif
+    } else {
+        snprintf(filepath, sizeof(filepath), "data.txt");
+    }
+    printf("数据已成功保存到：%s\n", filepath);
 }
 
 // 添加文件加载功能
@@ -466,37 +529,69 @@ void loadFromFile() {
         return;
     }
 
-
-    // 加载用户信息
+    // 读取用户数量
     if (fscanf(file, "%d\n", &userCount) != 1) {
         printf("加载用户数量失败！\n");
         fclose(file);
         return;
     }
 
+    char line[4096];
     for (int i = 0; i < userCount; i++) {
-        if (fscanf(file, "%49s %49s\n", users[i].username, users[i].password) != 2) {
+        // 读取用户名和密码（保留原有格式）
+        if (fscanf(file, "%49s %49s", users[i].username, users[i].password) != 2) {
             printf("加载用户信息失败！\n");
             fclose(file);
             return;
         }
-        for (int j = 0; j < MAX_USERS; j++) {
-            if (fscanf(file, "%d ", &users[i].friends[j]) != 1) {
+
+        // 清除到行尾（fscanf 不一定消耗换行）
+        if (!fgets(line, sizeof(line), file)) {
+            printf("加载用户好友信息失败！\n");
+            fclose(file);
+            return;
+        }
+
+        // 读取好友标志行（如果上一 fgets 只是空行则再读一次）
+        if (line[0] == '\n' || line[0] == '\0') {
+            if (!fgets(line, sizeof(line), file)) {
                 printf("加载用户好友信息失败！\n");
                 fclose(file);
                 return;
             }
         }
-        for (int j = 0; j < MAX_PRODUCTS; j++) {
-            if (fscanf(file, "%d ", &users[i].purchased[j]) != 1) {
+        // 初始化并解析好友行
+        memset(users[i].friends, 0, sizeof(users[i].friends));
+        char *tok = strtok(line, " \t\r\n");
+        int idx = 0;
+        while (tok != NULL && idx < MAX_USERS) {
+            users[i].friends[idx++] = atoi(tok);
+            tok = strtok(NULL, " \t\r\n");
+        }
+
+        // 读取购买记录行
+        if (!fgets(line, sizeof(line), file)) {
+            printf("加载用户购买记录失败！\n");
+            fclose(file);
+            return;
+        }
+        if (line[0] == '\n' || line[0] == '\0') {
+            if (!fgets(line, sizeof(line), file)) {
                 printf("加载用户购买记录失败！\n");
                 fclose(file);
                 return;
             }
         }
+        memset(users[i].purchased, 0, sizeof(users[i].purchased));
+        tok = strtok(line, " \t\r\n");
+        idx = 0;
+        while (tok != NULL && idx < MAX_PRODUCTS) {
+            users[i].purchased[idx++] = atoi(tok);
+            tok = strtok(NULL, " \t\r\n");
+        }
     }
 
-    // 加载商品信息
+    // 读取商品数量与商品信息
     if (fscanf(file, "%d\n", &productCount) != 1) {
         printf("加载商品数量失败！\n");
         fclose(file);
@@ -593,17 +688,14 @@ void modifyCurrentUserPurchases() {
         return;
     }
 
-    int productId, quantity;
-    printf("请输入要修改的商品ID：");
-    scanf("%d", &productId);
+    int productId = readIntWithPrompt("请输入要修改的商品ID：");
 
     if (productId < 0 || productId >= MAX_PRODUCTS) {
         printf("无效的商品ID！\n");
         return;
     }
 
-    printf("请输入购买数量（输入0表示删除购买记录）：");
-    scanf("%d", &quantity);
+    int quantity = readIntWithPrompt("请输入购买数量（输入0表示删除购买记录）：");
 
     if (quantity < 0) {
         printf("购买数量不能为负数！\n");
@@ -622,8 +714,7 @@ void addFriend() {
     }
 
     char friendUsername[50];
-    printf("请输入要添加的好友用户名：");
-    scanf("%49s", friendUsername); // 限制输入长度为 49
+    readNonEmptyString("请输入要添加的好友用户名：", friendUsername, sizeof(friendUsername)); // 限制输入长度为 49
 
     int friendIndex = findUserIndex(friendUsername);
     if (friendIndex == -1) {
@@ -648,8 +739,7 @@ void removeFriend() {
     }
 
     char friendUsername[50];
-    printf("请输入要删除的好友用户名：");
-    scanf("%49s", friendUsername); // 限制输入长度为 49
+    readNonEmptyString("请输入要删除的好友用户名：", friendUsername, sizeof(friendUsername)); // 限制输入长度为 49
 
     int friendIndex = findUserIndex(friendUsername);
     if (friendIndex == -1) {
@@ -674,7 +764,8 @@ void queryFriends() {
     }
 
     printf("您的好友列表：\n");
-    for (int i = 0; i < MAX_USERS; i++) {
+    // 只遍历已注册用户范围，避免打印未初始化的用户名
+    for (int i = 0; i < userCount; i++) {
         if (users[currentUserIndex].friends[i]) {
             printf("好友用户名：%s\n", users[i].username);
             printf("购买的商品：\n");
@@ -697,7 +788,7 @@ void adminMenu() {
     int adminChoice;
     while (1) {
         displayAdminMenu();
-        scanf("%d", &adminChoice);
+        adminChoice = readIntWithPrompt("");
 
         switch (adminChoice) {
             case 1:
@@ -746,7 +837,7 @@ void friendMenu() {
     int friendChoice;
     while (1) {
         displayFriendMenu();
-        scanf("%d", &friendChoice);
+        friendChoice = readIntWithPrompt("");
 
         switch (friendChoice) {
             case 1:
@@ -772,7 +863,7 @@ int main() {
 
     while (1) {
         displayMenu();
-        scanf("%d", &choice);
+        choice = readIntWithPrompt("");
 
         switch (choice) {
             case 1:
@@ -804,9 +895,5 @@ int main() {
             default:
                 printf("无效的选择，请重新输入！\n");
         }
-    }
-}
-
-        mainMenu:; // 主菜单标签
     }
 }

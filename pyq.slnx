@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="pyq/pyq.vcxproj" Id="ba03c260-c7b4-4de0-ad2c-580e3d234c7e" />
+  <Project Path="pyq/pyq.vcxproj" />
 </Solution>

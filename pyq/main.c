@@ -522,66 +522,133 @@ void saveToFile() {
 }
 
 // 添加文件加载功能
+// 添加文件加载功能
 void loadFromFile() {
-    FILE *file = fopen("data.txt", "r");
+    FILE* file = fopen("data.txt", "r");
+
+    // 如果文件不存在，生成默认数据并建立关联
     if (!file) {
-        printf("数据文件不存在，程序将以空数据启动！\n");
+        printf("未找到数据文件，正在生成默认测试数据...\n");
+
+        // 初始化随机数种子
+        srand((unsigned int)time(NULL));
+
+        // --- 1. 生成默认用户 ---
+        userCount = MAX_USERS;
+        for (int i = 0; i < userCount; i++) {
+            snprintf(users[i].username, sizeof(users[i].username), "user%d", i + 1);
+            strncpy(users[i].password, "pass", sizeof(users[i].password) - 1);
+            users[i].password[sizeof(users[i].password) - 1] = '\0';
+            memset(users[i].friends, 0, sizeof(users[i].friends));
+            memset(users[i].purchased, 0, sizeof(users[i].purchased));
+        }
+
+        // --- 2. 生成默认商品 ---
+        productCount = MAX_PRODUCTS;
+        for (int i = 0; i < productCount; i++) {
+            snprintf(products[i].name, sizeof(products[i].name), "pro%d", i + 1);
+            products[i].purchaseCount = 0; // 初始化为0
+        }
+
+        // --- 3. 建立双向好友关系 ---
+        printf("正在建立社交网络...\n");
+        for (int i = 0; i < userCount; i++) {
+            // 随机决定该用户的好友数量 (例如 3 到 7 个)
+            int targetFriends = 3 + rand() % 5;
+            int added = 0;
+
+            while (added < targetFriends) {
+                int friendId = rand() % userCount;
+
+                // 跳过自己或已添加的情况
+                if (friendId == i || users[i].friends[friendId]) {
+                    continue;
+                }
+
+                // 双向添加好友 (核心逻辑)
+                users[i].friends[friendId] = 1;
+                users[friendId].friends[i] = 1;
+
+                added++;
+            }
+        }
+
+        // --- 4. 生成随机购买记录并同步 purchaseCount ---
+        printf("正在生成购买行为数据...\n");
+        for (int i = 0; i < userCount; i++) {
+            // 随机决定该用户购买的商品种类数 (例如 2 到 5 种)
+            int boughtTypes = 2 + rand() % 4;
+
+            for (int j = 0; j < boughtTypes; j++) {
+                int productId = rand() % productCount;
+                // 随机购买数量 (1 到 3 件)
+                int quantity = 1 + rand() % 3;
+
+                // 更新用户购买记录
+                users[i].purchased[productId] += quantity;
+
+                // 重点：同步更新商品的总购买次数
+                products[productId].purchaseCount += quantity;
+            }
+        }
+
+        printf("默认测试数据生成完毕！\n");
+        printf("已生成 %d 个用户和 %d 个商品。\n", userCount, productCount);
+        printf("社交关系与购买记录已初始化。\n");
+
+        return; // 直接返回，不进行后续的文件读取
+    }
+
+    // --- 以下为原有的文件读取逻辑 ---
+    // (如果文件存在，则按原有逻辑加载)
+
+    // 尝试读取用户数量
+    int fileUserCount = 0;
+    if (fscanf(file, "%d\n", &fileUserCount) != 1) {
+        printf("数据文件为空或格式错误，已生成默认数据。\n");
+        fclose(file);
+
+        // 这里也可以调用上面的生成逻辑，或者简单处理
+        userCount = 0;
+        productCount = 0;
         return;
     }
 
-    // 读取用户数量
-    if (fscanf(file, "%d\n", &userCount) != 1) {
-        printf("加载用户数量失败！\n");
-        fclose(file);
-        return;
-    }
+    // 限制读取到的数量不超过最大值
+    if (fileUserCount < 0) fileUserCount = 0;
+    if (fileUserCount > MAX_USERS) fileUserCount = MAX_USERS;
+    userCount = fileUserCount;
 
     char line[4096];
     for (int i = 0; i < userCount; i++) {
-        // 读取用户名和密码（保留原有格式）
+        // 读取用户名和密码
         if (fscanf(file, "%49s %49s", users[i].username, users[i].password) != 2) {
             printf("加载用户信息失败！\n");
             fclose(file);
             return;
         }
 
-        // 清除到行尾（fscanf 不一定消耗换行）
-        if (!fgets(line, sizeof(line), file)) {
-            printf("加载用户好友信息失败！\n");
-            fclose(file);
-            return;
+        // 清除到行尾并读取好友行
+        if (!fgets(line, sizeof(line), file)) { /* 错误处理 */ }
+        if (line[0] == '\n' || line[0] == '\0') {
+            if (!fgets(line, sizeof(line), file)) { /* 错误处理 */ }
         }
 
-        // 读取好友标志行（如果上一 fgets 只是空行则再读一次）
-        if (line[0] == '\n' || line[0] == '\0') {
-            if (!fgets(line, sizeof(line), file)) {
-                printf("加载用户好友信息失败！\n");
-                fclose(file);
-                return;
-            }
-        }
-        // 初始化并解析好友行
+        // 解析好友
         memset(users[i].friends, 0, sizeof(users[i].friends));
-        char *tok = strtok(line, " \t\r\n");
+        char* tok = strtok(line, " \t\r\n");
         int idx = 0;
         while (tok != NULL && idx < MAX_USERS) {
             users[i].friends[idx++] = atoi(tok);
             tok = strtok(NULL, " \t\r\n");
         }
 
-        // 读取购买记录行
-        if (!fgets(line, sizeof(line), file)) {
-            printf("加载用户购买记录失败！\n");
-            fclose(file);
-            return;
-        }
+        // 读取并解析购买记录
+        if (!fgets(line, sizeof(line), file)) { /* 错误处理 */ }
         if (line[0] == '\n' || line[0] == '\0') {
-            if (!fgets(line, sizeof(line), file)) {
-                printf("加载用户购买记录失败！\n");
-                fclose(file);
-                return;
-            }
+            if (!fgets(line, sizeof(line), file)) { /* 错误处理 */ }
         }
+
         memset(users[i].purchased, 0, sizeof(users[i].purchased));
         tok = strtok(line, " \t\r\n");
         idx = 0;
@@ -592,11 +659,16 @@ void loadFromFile() {
     }
 
     // 读取商品数量与商品信息
-    if (fscanf(file, "%d\n", &productCount) != 1) {
+    int fileProductCount = 0;
+    if (fscanf(file, "%d\n", &fileProductCount) != 1) {
         printf("加载商品数量失败！\n");
         fclose(file);
         return;
     }
+
+    if (fileProductCount < 0) fileProductCount = 0;
+    if (fileProductCount > MAX_PRODUCTS) fileProductCount = MAX_PRODUCTS;
+    productCount = fileProductCount;
 
     for (int i = 0; i < productCount; i++) {
         if (fscanf(file, "%49s %d\n", products[i].name, &products[i].purchaseCount) != 2) {
@@ -688,10 +760,15 @@ void modifyCurrentUserPurchases() {
         return;
     }
 
+    if (productCount == 0) {
+        printf("当前没有商品可修改！\n");
+        return;
+    }
+
     int productId = readIntWithPrompt("请输入要修改的商品ID：");
 
-    if (productId < 0 || productId >= MAX_PRODUCTS) {
-        printf("无效的商品ID！\n");
+    if (productId < 0 || productId >= productCount) {
+        printf("无效的商品ID！有效范围：0 - %d\n", productCount - 1);
         return;
     }
 
@@ -702,8 +779,18 @@ void modifyCurrentUserPurchases() {
         return;
     }
 
+    // 计算用户原有数量与差值，并同步更新商品的总购买次数
+    int oldQty = users[currentUserIndex].purchased[productId];
     users[currentUserIndex].purchased[productId] = quantity;
-    printf("购买数据已更新！\n");
+
+    int delta = quantity - oldQty;
+    products[productId].purchaseCount += delta;
+    if (products[productId].purchaseCount < 0) {
+        products[productId].purchaseCount = 0; // 防止出现负值
+    }
+
+    printf("购买数据已更新！商品 '%s' 的总购买次数为 %d（变化 %+d）。\n",
+           products[productId].name, products[productId].purchaseCount, delta);
 }
 
 // 添加好友

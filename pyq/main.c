@@ -32,18 +32,32 @@ int productCount = 0;
 int currentUserIndex = -1; // -1 表示未登录
 
 // ---------- 输入辅助函数（使用 fgets，拒绝空输入或仅空白） ----------
-static void readLine(char *buf, int size) {
+static void readLine(char* buf, int size) {
+    // 1. 安全读取一行
     if (!fgets(buf, size, stdin)) {
         buf[0] = '\0';
         return;
     }
-    // 去掉结尾的换行和回车
-    size_t len = strcspn(buf, "\r\n");
-    buf[len] = '\0';
+
+    // --- 核心修复：清理缓冲区残留 ---
+    // 检查读取的字符串长度是否接近缓冲区上限，且末尾没有换行符
+    // 这通常意味着输入被截断了，缓冲区里还有剩余字符
+    int len = strlen(buf);
+    if (len > 0 && buf[len - 1] != '\n') {
+        // 循环读取并丢弃缓冲区中的剩余字符，直到遇到换行符或文件结束
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
+    }
+    // ---------------------------------
+
+    // 2. 去掉结尾的换行和回车
+    size_t len2 = strcspn(buf, "\r\n");
+    buf[len2] = '\0';
 }
 
 // 去除字符串两端空白字符（空格、制表、回车等）
 static void trim_whitespace(char *s) {
+    //去除字符串首尾的所有空白字符
     if (!s || !*s) return;
     char *start = s;
     while (*start && isspace((unsigned char)*start)) start++;
@@ -99,7 +113,7 @@ void registerUser() {
     readNonEmptyString("请输入用户名：", username, sizeof(username));
 
     // 检查用户名是否重复
-    char lowerUsername[50], lowerStoredUsername[50];
+	char lowerUsername[50], lowerStoredUsername[50];//统一转换为小写进行比较，避免大小写敏感问题
     for (int i = 0; i < userCount; i++) {
         strncpy(lowerUsername, username, 50);
         strncpy(lowerStoredUsername, users[i].username, 50);
@@ -119,6 +133,7 @@ void registerUser() {
     // 添加新用户
     strcpy(users[userCount].username, username);
     strcpy(users[userCount].password, password);
+	// 初始化好友关系和购买记录
     memset(users[userCount].friends, 0, sizeof(users[userCount].friends));
     memset(users[userCount].purchased, 0, sizeof(users[userCount].purchased));
     userCount++;
@@ -129,7 +144,7 @@ void registerUser() {
 // 修改登录功能，记录当前登录用户
 void loginUser() {
     char username[50], password[50];
-
+    
     readNonEmptyString("请输入用户名：", username, sizeof(username));
     readNonEmptyString("请输入密码：", password, sizeof(password));
 
@@ -735,6 +750,7 @@ void displayFriendMenu() {
     printf("3. 查询好友\n");
     printf("4. 返回主菜单\n");
     printf("========================================\n");
+    printf("请选择操作（输入对应数字）：");
 }
 
 // 显示当前登录用户的购买数据

@@ -467,6 +467,20 @@ void recommendProducts(int userId) {
         return;
     }
 
+    // 检查是否有有效推荐
+    int hasRecommendation = 0;
+    for (int i = 0; i < MAX_PRODUCTS; i++) {
+        if (recommendation[sortedIndices[i]] > 0) {
+            hasRecommendation = 1;
+            break;
+        }
+    }
+
+    if (!hasRecommendation) {
+        printf("暂无推荐商品！\n");
+        return;
+    }
+
     // 输出推荐商品
     printf("为用户推荐的商品：\n");
     for (int i = 0; i < MAX_PRODUCTS; i++) {
@@ -539,6 +553,7 @@ void saveToFile() {
     }
 }
 
+// 添加文件加载功能
 // 添加文件加载功能
 void loadFromFile() {
     while (1) {

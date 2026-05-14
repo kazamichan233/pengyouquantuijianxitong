@@ -15,14 +15,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\ConsoleApplication2\src\main.c">
-      <Filter>源文件</Filter>
+    <ClCompile Include="main.c">
+      <Filter>源文件\头文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\ConsoleApplication2\src\main.exe" />
+    <Text Include="data.txt">
+      <Filter>资源文件</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\..\ConsoleApplication2\src\data.txt" />
+    <None Include="pyq.exe">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

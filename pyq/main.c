@@ -129,21 +129,35 @@ void registerUser() {
 
     char username[50], password[50];
 
-    readNonEmptyString("请输入用户名：", username, sizeof(username));
+    while (1) {
+        readNonEmptyString("请输入用户名：", username, sizeof(username));
 
-    // 检查用户名是否重复
-    char lowerUsername[50], lowerStoredUsername[50];
-    for (int i = 0; i < appState.userCount; i++) {
-        strncpy(lowerUsername, username, 50);
-        strncpy(lowerStoredUsername, appState.users[i].username, 50);
-        for (int j = 0; j < 50; j++) {
-            lowerUsername[j] = tolower((unsigned char)lowerUsername[j]);
-            lowerStoredUsername[j] = tolower((unsigned char)lowerStoredUsername[j]);
+        // 检查用户名长度是否超出限制
+        if (strlen(username) >= sizeof(username)) {
+            printf("用户名过长，请限制在 %d 个字符以内！\n", (int)(sizeof(username) - 1));
+            continue;
         }
 
-        if (strncmp(lowerStoredUsername, lowerUsername, 50) == 0) {
-            printf("用户名已存在，请选择其他用户名！\n");
-            return;
+        // 检查用户名是否重复
+        char lowerUsername[50], lowerStoredUsername[50];
+        int isDuplicate = 0;
+        for (int i = 0; i < appState.userCount; i++) {
+            strncpy(lowerUsername, username, 50);
+            strncpy(lowerStoredUsername, appState.users[i].username, 50);
+            for (int j = 0; j < 50; j++) {
+                lowerUsername[j] = tolower((unsigned char)lowerUsername[j]);
+                lowerStoredUsername[j] = tolower((unsigned char)lowerStoredUsername[j]);
+            }
+
+            if (strncmp(lowerStoredUsername, lowerUsername, 50) == 0) {
+                printf("用户名已存在，请选择其他用户名！\n");
+                isDuplicate = 1;
+                break;
+            }
+        }
+
+        if (!isDuplicate) {
+            break;
         }
     }
 
@@ -480,7 +494,7 @@ void recommendProducts(int userId) {
     }
 
     // 检查是否有有效推荐
-    int hasRecommendation = 0;
+    hasRecommendation = 0;
     for (int i = 0; i < MAX_PRODUCTS; i++) {
         if (recommendation[sortedIndices[i]] > 0) {
             hasRecommendation = 1;

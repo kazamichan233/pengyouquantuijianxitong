@@ -1059,6 +1059,9 @@ void friendMenu() {
     } else {
         printf("无效的选择，请重新输入！\n");
     }
+
+    // 在函数最后添加保存数据到 data.txt 的逻辑
+    saveToFile();
 }
 
 int main() {

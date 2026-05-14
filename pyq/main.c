@@ -587,89 +587,8 @@ void loadFromFile() {
 
         // 如果文件不存在，提供选择
         if (!file) {
-            printf("未找到数据文件：%s\n", appState.dataFilePath);
-            printf("请选择操作：\n");
-            printf("1. 重新设置数据文件路径\n");
-            printf("2. 冷启动生成默认测试数据\n");
-
-            int choice = readIntWithPrompt("请输入您的选择（1 或 2）：");
-            if (choice == 1) {
-                printf("请重新设置数据文件路径,或检查是否有读写权限。\n");
-                setFilePath();
-                continue; // 重新尝试加载
-            }
-            else if (choice == 2) {
-                printf("正在生成默认测试数据...\n");
-
-                // --- 生成默认用户 ---
-                appState.userCount = MAX_USERS;
-                for (int i = 0; i < appState.userCount; i++) {
-                    snprintf(appState.users[i].username, sizeof(appState.users[i].username), "user%d", i + 1);
-                    strncpy(appState.users[i].password, "pass", sizeof(appState.users[i].password) - 1);
-                    appState.users[i].password[sizeof(appState.users[i].password) - 1] = '\0';
-                    memset(appState.users[i].friends, 0, sizeof(appState.users[i].friends));
-                    memset(appState.users[i].purchased, 0, sizeof(appState.users[i].purchased));
-                }
-
-                // --- 生成默认商品 ---
-                appState.productCount = MAX_PRODUCTS;
-                for (int i = 0; i < appState.productCount; i++) {
-                    snprintf(appState.products[i].name, sizeof(appState.products[i].name), "pro%d", i + 1);
-                    appState.products[i].purchaseCount = 0; // 初始化为0
-                }
-
-                // --- 建立双向好友关系 ---
-                printf("正在建立社交网络...\n");
-                for (int i = 0; i < appState.userCount; i++) {
-                    // 随机决定该用户的好友数量 (例如 3 到 7 个)
-                    int targetFriends = 3 + rand() % 5;
-                    int added = 0;
-
-                    while (added < targetFriends) {
-                        int friendId = rand() % appState.userCount;
-
-                        // 跳过自己或已添加的情况
-                        if (friendId == i || appState.users[i].friends[friendId]) {
-                            continue;
-                        }
-
-                        // 双向添加好友 (核心逻辑)
-                        appState.users[i].friends[friendId] = 1;
-                        appState.users[friendId].friends[i] = 1;
-
-                        added++;
-                    }
-                }
-
-                // --- 生成随机购买记录并同步 purchaseCount ---
-                printf("正在生成购买行为数据...\n");
-                for (int i = 0; i < appState.userCount; i++) {
-                    // 随机决定该用户购买的商品种类数 (例如 2 到 5 种)
-                    int boughtTypes = 2 + rand() % 4;
-
-                    for (int j = 0; j < boughtTypes; j++) {
-                        int productId = rand() % appState.productCount;
-                        // 随机购买数量 (1 到 3 件)
-                        int quantity = 1 + rand() % 3;
-
-                        // 更新用户购买记录
-                        appState.users[i].purchased[productId] += quantity;
-
-                        // 重点：同步更新商品的总购买次数
-                        appState.products[productId].purchaseCount += quantity;
-                    }
-                }
-
-                printf("默认测试数据生成完毕！\n");
-                printf("已生成 %d 个用户和 %d 个商品。\n", appState.userCount, appState.productCount);
-                printf("社交关系与购买记录已初始化。\n");
-
-                return; // 直接返回，不进行后续的文件读取
-            }
-            else {
-                printf("无效的选择，请重新输入！\n");
-                continue;
-            }
+            handleFileReadError();
+            continue; // 重新尝试加载
         }
 
         // --- 以下为文件读取逻辑 ---
@@ -677,16 +596,14 @@ void loadFromFile() {
         if (fscanf(file, "%d\n", &fileUserCount) != 1) {
             printf("数据文件格式错误：无法读取用户数量！\n");
             fclose(file);
-            printf("请重新设置数据文件路径或检查文件是否存在。\n");
-            setFilePath();
+            handleFileReadError();
             continue;
         }
 
         if (fileUserCount < 0 || fileUserCount > MAX_USERS) {
             printf("数据文件格式错误：用户数量超出范围！\n");
             fclose(file);
-            printf("请重新设置数据文件路径或检查文件是否存在。\n");
-            setFilePath();
+            handleFileReadError();
             continue;
         }
         appState.userCount = fileUserCount;
@@ -1060,6 +977,87 @@ void friendMenu() {
         default:
             printf("无效的选择，请重新输入！\n");
         }
+    }
+}
+
+// 添加一个函数来封装591到673行的逻辑
+    handleFileReadError() {
+    printf("未找到有效的数据文件：%s\n", appState.dataFilePath);
+    printf("请选择操作：\n");
+    printf("1. 重新设置数据文件路径\n");
+    printf("2. 冷启动生成默认测试数据\n");
+
+    int choice = readIntWithPrompt("请输入您的选择（1 或 2）：");
+    if (choice == 1) {
+        printf("请重新设置数据文件路径,或检查是否有读写权限。\n");
+        setFilePath();
+    } else if (choice == 2) {
+        printf("正在生成默认测试数据...\n");
+
+        // --- 生成默认用户 ---
+        appState.userCount = MAX_USERS;
+        for (int i = 0; i < appState.userCount; i++) {
+            snprintf(appState.users[i].username, sizeof(appState.users[i].username), "user%d", i + 1);
+            strncpy(appState.users[i].password, "pass", sizeof(appState.users[i].password) - 1);
+            appState.users[i].password[sizeof(appState.users[i].password) - 1] = '\0';
+            memset(appState.users[i].friends, 0, sizeof(appState.users[i].friends));
+            memset(appState.users[i].purchased, 0, sizeof(appState.users[i].purchased));
+        }
+
+        // --- 生成默认商品 ---
+        appState.productCount = MAX_PRODUCTS;
+        for (int i = 0; i < appState.productCount; i++) {
+            snprintf(appState.products[i].name, sizeof(appState.products[i].name), "pro%d", i + 1);
+            appState.products[i].purchaseCount = 0; // 初始化为0
+        }
+
+        // --- 建立双向好友关系 ---
+        printf("正在建立社交网络...\n");
+        for (int i = 0; i < appState.userCount; i++) {
+            // 随机决定该用户的好友数量 (例如 3 到 7 个)
+            int targetFriends = 3 + rand() % 5;
+            int added = 0;
+
+            while (added < targetFriends) {
+                int friendId = rand() % appState.userCount;
+
+                // 跳过自己或已添加的情况
+                if (friendId == i || appState.users[i].friends[friendId]) {
+                    continue;
+                }
+
+                // 双向添加好友 (核心逻辑)
+                appState.users[i].friends[friendId] = 1;
+                appState.users[friendId].friends[i] = 1;
+
+                added++;
+            }
+        }
+
+        // --- 生成随机购买记录并同步 purchaseCount ---
+        printf("正在生成购买行为数据...\n");
+        for (int i = 0; i < appState.userCount; i++) {
+            // 随机决定该用户购买的商品种类数 (例如 2 到 5 种)
+            int boughtTypes = 2 + rand() % 4;
+
+            for (int j = 0; j < boughtTypes; j++) {
+                int productId = rand() % appState.productCount;
+                // 随机购买数量 (1 到 3 件)
+                int quantity = 1 + rand() % 3;
+
+                // 更新用户购买记录
+                appState.users[i].purchased[productId] += quantity;
+
+                // 重点：同步更新商品的总购买次数
+                appState.products[productId].purchaseCount += quantity;
+            }
+        }
+
+        printf("默认测试数据生成完毕！\n");
+        printf("已生成 %d 个用户和 %d 个商品。\n", appState.userCount, appState.productCount);
+        printf("社交关系与购买记录已初始化。\n");
+    } else {
+        printf("无效的选择，请重新输入！\n");
     }
 }
 

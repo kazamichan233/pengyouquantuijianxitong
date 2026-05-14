@@ -48,9 +48,21 @@ static void readLine(char* buf, int size) {
         buf[0] = '\0';
         return;
     }
-    // 去掉结尾的换行和回车
-    size_t len = strcspn(buf, "\r\n");
-    buf[len] = '\0';
+
+    // --- 核心修复：清理缓冲区残留 ---
+    // 检查读取的字符串长度是否接近缓冲区上限，且末尾没有换行符
+    // 这通常意味着输入被截断了，缓冲区里还有剩余字符
+    int len = strlen(buf);
+    if (len > 0 && buf[len - 1] != '\n') {
+        // 循环读取并丢弃缓冲区中的剩余字符，直到遇到换行符或文件结束
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
+    }
+    // ---------------------------------
+
+    // 2. 去掉结尾的换行和回车
+    size_t len2 = strcspn(buf, "\r\n");
+    buf[len2] = '\0';
 }
 
 // 去除字符串两端空白字符（空格、制表、回车等）
@@ -150,7 +162,7 @@ void registerUser() {
 // 修改登录功能，记录当前登录用户
 void loginUser() {
     char username[50], password[50];
-
+    
     readNonEmptyString("请输入用户名：", username, sizeof(username));
     readNonEmptyString("请输入密码：", password, sizeof(password));
 
